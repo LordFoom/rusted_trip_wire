@@ -2,13 +2,15 @@
 name = "rusted_trip_wire"
 version = "0.1.0"
 edition = "2021"
-authors = "foom"
+authors = ["foom"]
 description = "Watch a file or directory and trigger commands on changes"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.81"
 clap = { version = "4.5.2", features = ["derive"] }
+notify = "6.1.1"
 
 [[bin]]
 name="rtw"
