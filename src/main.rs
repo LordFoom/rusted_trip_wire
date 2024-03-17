@@ -1,5 +1,7 @@
 use clap::Parser;
 use anyhow::Result;
+use notify::{Config, PollWatcher, RecursiveMode, Watcher};
+use std::path::Path;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -15,9 +17,11 @@ fn main()->Result<()> {
     //oh, there is a cool library we can use
     let mut watcher = notify::recommended_watcher(|res|{
         match res {
-            Ok(event) => println!("event: {}", event),
+            Ok(event) => println!("event: {:?}", event),
             Err(e) => println!("watch error: {}", e),
         }
     })?;
     watcher.watch(Path::new("."), RecursiveMode::Recursive)?;
+
+    Ok(())
 }
