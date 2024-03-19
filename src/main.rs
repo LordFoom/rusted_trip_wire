@@ -8,10 +8,14 @@ struct Args {
     ///This is the file to watch for any changes
     #[arg(short, long, value_name = "FILE")]
     path_to_watch: String,
+    ///If provided, will backup files when created and when modified to this directory,
+    ///will not delete
+    backup_path: Option<String>,
     ///This is the command that will be fired if the file changes
     #[arg(short, long, value_name = "COMMAND")]
     command: Option<String>,
 }
+
 fn main() -> notify::Result<()> {
     let args = Args::parse();
     //oh, there is a cool library we can use
@@ -30,11 +34,18 @@ fn main() -> notify::Result<()> {
 fn watch(path: &str) -> notify::Result<()> {
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
-    watcher.watch(path.as_ref(), RecursiveMode::Recursive);
+    watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
 
     for res in rx {
         match res {
-            Ok(event) => println!("Event! {event:?}"),
+            Ok(event) => match event.kind {
+                notify::EventKind::Any => todo!(),
+                notify::EventKind::Access(_) => todo!(),
+                notify::EventKind::Create(_) => todo!(),
+                notify::EventKind::Modify(_) => todo!(),
+                notify::EventKind::Remove(_) => todo!(),
+                notify::EventKind::Other => todo!(),
+            },
             Err(err) => println!("ERRRROOORRRRR {err:?}"),
         }
     }
