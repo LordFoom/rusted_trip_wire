@@ -1,15 +1,21 @@
 use clap::Parser;
+use log::info;
 use notify::RecommendedWatcher;
 use notify::{Config, RecursiveMode, Watcher};
 
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(
+    version,
+    about,
+    long_about = "Watch a folder and copy new and changed files to a backup directory"
+)]
 struct Args {
     ///This is the file to watch for any changes
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(short, long, value_name = "DIR_TO_WATCH")]
     path_to_watch: String,
     ///If provided, will backup files when created and when modified to this directory,
     ///will not delete
+    #[arg(short, long, value_name = "BACKUP_DIR")]
     backup_path: Option<String>,
     ///This is the command that will be fired if the file changes
     #[arg(short, long, value_name = "COMMAND")]
@@ -39,12 +45,16 @@ fn watch(path: &str) -> notify::Result<()> {
     for res in rx {
         match res {
             Ok(event) => match event.kind {
-                notify::EventKind::Any => todo!(),
-                notify::EventKind::Access(_) => todo!(),
-                notify::EventKind::Create(_) => todo!(),
-                notify::EventKind::Modify(_) => todo!(),
-                notify::EventKind::Remove(_) => todo!(),
-                notify::EventKind::Other => todo!(),
+                notify::EventKind::Create(_) | notify::EventKind::Modify(_) => {
+                    for path in event.paths {
+                        println!(
+                            "We received {:?}, for path: {}",
+                            event.kind,
+                            path.to_str().unwrap()
+                        );
+                    }
+                }
+                _ => info!("We do nothing"),
             },
             Err(err) => println!("ERRRROOORRRRR {err:?}"),
         }
