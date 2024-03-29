@@ -59,7 +59,9 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn watch(path: &str) -> notify::Result<()> {
+///Watch a directory and if a file in it is modified, and backup_path is provided,
+///then make a copy of that file in the backup path
+fn watch(path: &str, maybe_backup_path: Option<&str>) -> notify::Result<()> {
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
@@ -74,6 +76,9 @@ fn watch(path: &str) -> notify::Result<()> {
                             event.kind,
                             path.to_str().unwrap()
                         );
+                    }
+                    if let Some(backup_path) = maybe_backup_path {
+                        //create a new filename based on time
                     }
                 }
                 _ => info!("We do nothing"),
