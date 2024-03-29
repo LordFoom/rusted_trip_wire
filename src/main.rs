@@ -52,7 +52,7 @@ fn main() -> anyhow::Result<()> {
     //     Err(e) => println!("watch error: {}", e),
     // })?;
     // watcher.watch(Path::new(&args.path_to_watch), RecursiveMode::Recursive)?;
-    if let Err(e) = watch(&args.path_to_watch) {
+    if let Err(e) = watch(args.path_to_watch, args.backup_path) {
         println!("We had a terrible error! {}", e);
     }
 
@@ -61,7 +61,7 @@ fn main() -> anyhow::Result<()> {
 
 ///Watch a directory and if a file in it is modified, and backup_path is provided,
 ///then make a copy of that file in the backup path
-fn watch(path: &str, maybe_backup_path: Option<&str>) -> notify::Result<()> {
+fn watch(path: String, maybe_backup_path: Option<String>) -> notify::Result<()> {
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
@@ -77,7 +77,7 @@ fn watch(path: &str, maybe_backup_path: Option<&str>) -> notify::Result<()> {
                             path.to_str().unwrap()
                         );
                     }
-                    if let Some(backup_path) = maybe_backup_path {
+                    if let Some(ref backup_path) = maybe_backup_path {
                         //create a new filename based on time
                     }
                 }
