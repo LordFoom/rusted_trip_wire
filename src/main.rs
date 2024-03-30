@@ -1,3 +1,4 @@
+use chrono::Local;
 use clap::Parser;
 use log::{info, LevelFilter};
 use log4rs::append::console::ConsoleAppender;
@@ -76,9 +77,14 @@ fn watch(path: String, maybe_backup_path: Option<String>) -> notify::Result<()> 
                             event.kind,
                             path.to_str().unwrap()
                         );
-                    }
-                    if let Some(ref backup_path) = maybe_backup_path {
-                        //create a new filename based on time
+                        if let Some(ref backup_path) = maybe_backup_path {
+                            //create a new backup filename based on time
+                            //first get the current date and time
+                            // let now = Da
+                            let bufn = construct_backup_file_name(
+                                path.to_str().expect("No path found...but how??"),
+                            );
+                        }
                     }
                 }
                 _ => info!("We do nothing"),
@@ -88,4 +94,27 @@ fn watch(path: String, maybe_backup_path: Option<String>) -> notify::Result<()> 
     }
 
     Ok(())
+}
+
+fn construct_backup_file_name(base_file_name: &str) -> String {
+    let now = Local::now();
+    let date_string = now.format("%Y-%m-%d_%H_%M_%S").to_string();
+    let mut backup_file_name = base_file_name.to_string();
+    backup_file_name.push('.');
+    backup_file_name.push_str(&date_string);
+    backup_file_name
+}
+
+#[cfg(test)]
+mod test {
+    use regex::Regex;
+
+    use crate::construct_backup_file_name;
+
+    #[test]
+    pub fn test_construct_backup_file_name() {
+        let new_file_name = construct_backup_file_name("test_file.txt");
+        let test_regex = Regex::new(r".*\.\d\d\d\d-\d\d-\d\d_\d\d_\d\d_\d\d").unwrap();
+        assert!(test_regex.is_match(&new_file_name));
+    }
 }
