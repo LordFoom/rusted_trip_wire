@@ -1,3 +1,6 @@
+use std::path::Path;
+
+use anyhow::{anyhow, Result};
 use chrono::Local;
 use clap::Parser;
 use log::{info, LevelFilter};
@@ -62,10 +65,19 @@ fn main() -> anyhow::Result<()> {
 
 ///Watch a directory and if a file in it is modified, and backup_path is provided,
 ///then make a copy of that file in the backup path
-fn watch(path: String, maybe_backup_path: Option<String>) -> notify::Result<()> {
+fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
+
+    if let Some(ref backup_path) = maybe_backup_path {
+        if !Path::new(&backup_path).is_dir() {
+            return Err(anyhow!(
+                "Backup path should be a directory, check {} exists and is directory",
+                backup_path
+            ));
+        }
+    }
 
     for res in rx {
         match res {
