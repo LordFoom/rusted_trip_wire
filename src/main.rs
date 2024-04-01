@@ -66,10 +66,12 @@ fn main() -> anyhow::Result<()> {
 ///Watch a directory and if a file in it is modified, and backup_path is provided,
 ///then make a copy of that file in the backup path
 fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
+    info!("Watching {}", path.to_string());
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
 
+    //Ensure the backup path is a directory
     if let Some(ref backup_path) = maybe_backup_path {
         if !Path::new(&backup_path).is_dir() {
             return Err(anyhow!(
@@ -90,12 +92,10 @@ fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
                             path.to_str().unwrap()
                         );
                         if let Some(ref backup_path) = maybe_backup_path {
-                            //create a new backup filename based on time
-                            //first get the current date and time
-                            // let now = Da
                             let bufn = construct_backup_file_name(
                                 path.to_str().expect("No path found...but how??"),
                             );
+                            std::fs::copy(path.to_str().unwrap(), bufn);
                         }
                     }
                 }
@@ -108,6 +108,7 @@ fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
     Ok(())
 }
 
+///Return bzsename.iso-8601-date
 fn construct_backup_file_name(base_file_name: &str) -> String {
     let now = Local::now();
     let date_string = now.format("%Y-%m-%d_%H_%M_%S").to_string();
