@@ -1,3 +1,5 @@
+mod util;
+
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
@@ -8,6 +10,8 @@ use log4rs::append::console::ConsoleAppender;
 use log4rs::config::{Appender, Root};
 use notify::RecommendedWatcher;
 use notify::{Config, RecursiveMode, Watcher};
+
+use crate::util::confirm_backup_directory_if_needed;
 
 #[derive(Parser)]
 #[command(
@@ -68,18 +72,11 @@ fn main() -> anyhow::Result<()> {
 fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
     info!("Watching {}", path.to_string());
     let (tx, rx) = std::sync::mpsc::channel();
+
     let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
 
-    //Ensure the backup path is a directory
-    if let Some(ref backup_path) = maybe_backup_path {
-        if !Path::new(&backup_path).is_dir() {
-            return Err(anyhow!(
-                "Backup path should be a directory, check {} exists and is directory",
-                backup_path
-            ));
-        }
-    }
+    confirm_backup_directory_if_needed(maybe_backup_path)?;
 
     for res in rx {
         match res {
@@ -92,10 +89,10 @@ fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
                             path.to_str().unwrap()
                         );
                         if let Some(ref backup_path) = maybe_backup_path {
-                            let bufn = construct_backup_file_name(
-                                path.to_str().expect("No path found...but how??"),
-                            );
-                            std::fs::copy(path.to_str().unwrap(), bufn);
+                            if let Some(filename) = path.file_name() {
+                                let bufn = construct_backup_file_name(filename);
+                                std::fs::copy(path.to_str().unwrap(), bufn);
+                            }
                         }
                     }
                 }
