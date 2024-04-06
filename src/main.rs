@@ -1,8 +1,8 @@
 mod util;
 
-use std::path::Path;
+use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::Local;
 use clap::Parser;
 use log::{info, LevelFilter};
@@ -11,7 +11,7 @@ use log4rs::config::{Appender, Root};
 use notify::RecommendedWatcher;
 use notify::{Config, RecursiveMode, Watcher};
 
-use crate::util::confirm_backup_directory_if_needed;
+use crate::util::confirm_backup_directory_if_provided;
 
 #[derive(Parser)]
 #[command(
@@ -76,7 +76,7 @@ fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
     let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
 
-    confirm_backup_directory_if_needed(maybe_backup_path)?;
+    confirm_backup_directory_if_provided(&maybe_backup_path)?;
 
     for res in rx {
         match res {
@@ -89,9 +89,15 @@ fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
                             path.to_str().unwrap()
                         );
                         if let Some(ref backup_path) = maybe_backup_path {
-                            if let Some(filename) = path.file_name() {
-                                let bufn = construct_backup_file_name(filename);
-                                std::fs::copy(path.to_str().unwrap(), bufn);
+                            if let Some(os_filename) = path.file_name() {
+                                if let Some(filename) = os_filename.to_str() {
+                                    //this is just the filename
+                                    let bufn = construct_backup_file_name(filename);
+                                    //now we add the backup directory
+                                    let mut bufp = PathBuf::from(&backup_path);
+                                    bufp.push(bufn);
+                                    std::fs::copy(path.to_str().unwrap(), bufp.to_str().unwrap());
+                                }
                             }
                         }
                     }
