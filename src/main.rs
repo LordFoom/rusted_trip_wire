@@ -96,7 +96,7 @@ fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
                                     //now we add the backup directory
                                     let mut bufp = PathBuf::from(&backup_path);
                                     bufp.push(bufn);
-                                    std::fs::copy(path.to_str().unwrap(), bufp.to_str().unwrap());
+                                    std::fs::copy(path.to_str().unwrap(), bufp.to_str().unwrap())?;
                                 }
                             }
                         }
