@@ -60,7 +60,7 @@ fn main() -> anyhow::Result<()> {
     //     Err(e) => println!("watch error: {}", e),
     // })?;
     // watcher.watch(Path::new(&args.path_to_watch), RecursiveMode::Recursive)?;
-    if let Err(e) = watch(args.path_to_watch, args.backup_path) {
+    if let Err(e) = watch(args.path_to_watch, args.backup_path, args.command) {
         println!("We had a terrible error! {}", e);
     }
 
@@ -69,7 +69,11 @@ fn main() -> anyhow::Result<()> {
 
 ///Watch a directory and if a file in it is modified, and backup_path is provided,
 ///then make a copy of that file in the backup path
-fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
+fn watch(
+    path: String,
+    maybe_backup_path: Option<String>,
+    maybe_trigger_command: Option<String>,
+) -> Result<()> {
     info!("Watching {}", path.to_string());
     let (tx, rx) = std::sync::mpsc::channel();
 
@@ -88,18 +92,7 @@ fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
                             event.kind,
                             path.to_str().unwrap()
                         );
-                        if let Some(ref backup_path) = maybe_backup_path {
-                            if let Some(os_filename) = path.file_name() {
-                                if let Some(filename) = os_filename.to_str() {
-                                    //this is just the filename
-                                    let bufn = construct_backup_file_name(filename);
-                                    //now we add the backup directory
-                                    let mut bufp = PathBuf::from(&backup_path);
-                                    bufp.push(bufn);
-                                    std::fs::copy(path.to_str().unwrap(), bufp.to_str().unwrap())?;
-                                }
-                            }
-                        }
+                        backup_file_if_required(&path, &maybe_backup_path)?;
                     }
                 }
                 _ => info!("We do nothing"),
@@ -108,6 +101,23 @@ fn watch(path: String, maybe_backup_path: Option<String>) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+///If a backup path has been provided, we copy the file
+pub fn backup_file_if_required(path: &PathBuf, maybe_backup_path: &Option<String>) -> Result<()> {
+    if let Some(ref backup_path) = maybe_backup_path {
+        if let Some(os_filename) = path.file_name() {
+            if let Some(filename) = os_filename.to_str() {
+                //this is just the filename
+                let bufn = construct_backup_file_name(filename);
+                //now we add the backup directory
+                let mut bufp = PathBuf::from(&backup_path);
+                bufp.push(bufn);
+                std::fs::copy(path.to_str().unwrap(), bufp.to_str().unwrap())?;
+            }
+        }
+    }
     Ok(())
 }
 
