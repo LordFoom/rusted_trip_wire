@@ -27,7 +27,7 @@ struct Args {
     ///will not delete
     #[arg(short, long, value_name = "BACKUP_DIR")]
     backup_path: Option<String>,
-    ///This is the command that will be fired for creation and change
+    ///Line up a command to trigger, inbuilt variables are OLD_FILENAME and NEW_FILENAME
     #[arg(short, long, value_name = "COMMAND")]
     command: Option<String>,
     ///Output info while we run
@@ -93,6 +93,7 @@ fn watch(
                             path.to_str().unwrap()
                         );
                         backup_file_if_required(&path, &maybe_backup_path)?;
+                        run_command_if_required(&path, &maybe_backup_path, &maybe_trigger_command)?;
                     }
                 }
                 _ => info!("We do nothing"),
@@ -104,8 +105,26 @@ fn watch(
     Ok(())
 }
 
-///If a backup path has been provided, we copy the file
-pub fn backup_file_if_required(path: &PathBuf, maybe_backup_path: &Option<String>) -> Result<()> {
+pub fn run_command_if_required(
+    old_path: &PathBuf,
+    maybe_new_path: &Option<String>,
+    maybe_command: &Option<String>,
+) -> Result<()> {
+    //short circuit if need be
+    if &None == maybe_command {
+        info!("No command supplied, no attempt to run a command will be made");
+        return Ok(());
+    }
+
+    let cmd = maybe_command.as_ref().unwrap();
+
+    Ok(())
+}
+///If a backup path has been provided, we copy the file, Optionally returning the new file nae
+pub fn backup_file_if_required(
+    path: &PathBuf,
+    maybe_backup_path: &Option<String>,
+) -> Result<Option<String>> {
     if let Some(ref backup_path) = maybe_backup_path {
         if let Some(os_filename) = path.file_name() {
             if let Some(filename) = os_filename.to_str() {
@@ -115,10 +134,13 @@ pub fn backup_file_if_required(path: &PathBuf, maybe_backup_path: &Option<String
                 let mut bufp = PathBuf::from(&backup_path);
                 bufp.push(bufn);
                 std::fs::copy(path.to_str().unwrap(), bufp.to_str().unwrap())?;
+                let new_file_path = String::from(bufp.to_str().unwrap());
+                let nfp_option = Some(new_file_path);
+                return Ok(nfp_option);
             }
         }
     }
-    Ok(())
+    Ok(None)
 }
 
 ///Return bzsename.iso-8601-date
@@ -142,5 +164,13 @@ mod test {
         let new_file_name = construct_backup_file_name("test_file.txt");
         let test_regex = Regex::new(r".*\.\d\d\d\d-\d\d-\d\d_\d\d_\d\d_\d\d").unwrap();
         assert!(test_regex.is_match(&new_file_name));
+    }
+
+    #[test]
+    pub fn test_backup_file_if_required() {
+        //create a test file
+        std::fs::File::create("this_is_a_test_file");
+        let source_path = "./this_is_a_test_file.test";
+        let destination_path = "./this_is_a_test_file.test.copy";
     }
 }
