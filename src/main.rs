@@ -1,6 +1,7 @@
 mod util;
 
 use std::path::PathBuf;
+use std::process::Command;
 
 use anyhow::Result;
 use chrono::Local;
@@ -117,6 +118,18 @@ pub fn run_command_if_required(
     }
 
     let cmd = maybe_command.as_ref().unwrap();
+    info!("Trying to run command {}", cmd);
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd")
+            .args(["/C", cmd])
+            .output()
+            .expect("Unable to run command")
+    } else {
+        Command::new("sh")
+            .args(["-c", cmd])
+            .output()
+            .expect("Unable to run command")
+    };
 
     Ok(())
 }
@@ -155,9 +168,10 @@ fn construct_backup_file_name(base_file_name: &str) -> String {
 
 #[cfg(test)]
 mod test {
+
     use regex::Regex;
 
-    use crate::construct_backup_file_name;
+    use crate::{backup_file_if_required, construct_backup_file_name};
 
     #[test]
     pub fn test_construct_backup_file_name() {
@@ -169,8 +183,12 @@ mod test {
     #[test]
     pub fn test_backup_file_if_required() {
         //create a test file
-        std::fs::File::create("this_is_a_test_file");
-        let source_path = "./this_is_a_test_file.test";
-        let destination_path = "./this_is_a_test_file.test.copy";
+        let _file = std::fs::File::create("this_is_a_test_file.test").unwrap();
+        let mut source_path = std::fs::read_link("this_is_a_test_file.test").unwrap();
+        let destination_path = "./this_is_a_test_file.test.copy".to_string();
+        let maybe_destination_path = Some(destination_path);
+        backup_file_if_required(&source_path, &maybe_destination_path).unwrap();
+
+        assert!(std::path::Path::new("./this_is_a_test_file.test.copy").exists());
     }
 }
