@@ -1,7 +1,7 @@
 mod util;
 
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, ExitStatus};
 
 use anyhow::Result;
 use chrono::Local;
@@ -22,7 +22,6 @@ use crate::util::confirm_backup_directory_if_provided;
 )]
 struct Args {
     ///This is the file to watch for any changes
-    #[arg(short, long, value_name = "DIR_TO_WATCH")]
     path_to_watch: String,
     ///If provided, will backup files when created and when modified to this directory,
     ///will not delete
@@ -131,6 +130,17 @@ pub fn run_command_if_required(
             .expect("Unable to run command")
     };
 
+    if output.status.success() {
+        println!(
+            "{}",
+            std::str::from_utf8(&output.stdout[..]).expect("Unable to make stdout a str")
+        );
+    } else {
+        println!(
+            "ERROR: {}",
+            std::str::from_utf8(&output.stdout[..]).expect("Unable to make stdout a str")
+        );
+    }
     Ok(())
 }
 ///If a backup path has been provided, we copy the file, Optionally returning the new file nae
