@@ -27,7 +27,8 @@ struct Args {
     ///will not delete
     #[arg(short, long, value_name = "BACKUP_DIR")]
     backup_path: Option<String>,
-    ///Line up a command to trigger, inbuilt variables are OLD_FILENAME and NEW_FILENAME
+    ///Line up a command to trigger, inbuilt variables are OFP for Old File Path and NFP for New
+    ///File Path
     #[arg(short, long, value_name = "COMMAND")]
     command: Option<String>,
     ///Output info while we run
@@ -94,7 +95,7 @@ fn watch(
                         );
                         backup_file_if_required(&path, &maybe_backup_path)?;
                         run_command_if_required(
-                            &path.to_str().unwrap(),
+                            path.to_str().unwrap(),
                             &maybe_backup_path,
                             &maybe_trigger_command,
                         )?;
@@ -115,19 +116,19 @@ pub fn run_command_if_required(
     maybe_command: &Option<String>,
 ) -> Result<()> {
     //short circuit if need be
-    if &None == maybe_command {
+    if maybe_command.is_none() {
         info!("No command supplied, no attempt to run a command will be made");
         return Ok(());
     }
 
-    let mut cmd = maybe_command.as_ref().unwrap();
+    let cmd = maybe_command.as_ref().unwrap();
     let new_path = if let Some(path) = maybe_new_path {
         path
     } else {
         ""
     };
     //now replace our built-ins
-    let replaced_cmd = cmd.replace("${OFN}", old_path).replace("${NFN}", new_path);
+    let replaced_cmd = cmd.replace("OFP", old_path).replace("NFP", new_path);
     info!("Trying to run command {}", cmd);
     let output = if cfg!(target_os = "windows") {
         Command::new("cmd")
