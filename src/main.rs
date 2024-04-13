@@ -1,7 +1,7 @@
 mod util;
 
-use std::path::PathBuf;
-use std::process::{Command, ExitStatus};
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use anyhow::Result;
 use chrono::Local;
@@ -93,7 +93,11 @@ fn watch(
                             path.to_str().unwrap()
                         );
                         backup_file_if_required(&path, &maybe_backup_path)?;
-                        run_command_if_required(&path, &maybe_backup_path, &maybe_trigger_command)?;
+                        run_command_if_required(
+                            &path.to_str().unwrap(),
+                            &maybe_backup_path,
+                            &maybe_trigger_command,
+                        )?;
                     }
                 }
                 _ => info!("We do nothing"),
@@ -106,7 +110,7 @@ fn watch(
 }
 
 pub fn run_command_if_required(
-    old_path: &PathBuf,
+    old_path: &str,
     maybe_new_path: &Option<String>,
     maybe_command: &Option<String>,
 ) -> Result<()> {
@@ -116,16 +120,23 @@ pub fn run_command_if_required(
         return Ok(());
     }
 
-    let cmd = maybe_command.as_ref().unwrap();
+    let mut cmd = maybe_command.as_ref().unwrap();
+    let new_path = if let Some(path) = maybe_new_path {
+        path
+    } else {
+        ""
+    };
+    //now replace our built-ins
+    let replaced_cmd = cmd.replace("${OFN}", old_path).replace("${NFN}", new_path);
     info!("Trying to run command {}", cmd);
     let output = if cfg!(target_os = "windows") {
         Command::new("cmd")
-            .args(["/C", cmd])
+            .args(["/C", &replaced_cmd])
             .output()
             .expect("Unable to run command")
     } else {
         Command::new("sh")
-            .args(["-c", cmd])
+            .args(["-c", &replaced_cmd])
             .output()
             .expect("Unable to run command")
     };
@@ -145,7 +156,7 @@ pub fn run_command_if_required(
 }
 ///If a backup path has been provided, we copy the file, Optionally returning the new file nae
 pub fn backup_file_if_required(
-    path: &PathBuf,
+    path: &Path,
     maybe_backup_path: &Option<String>,
 ) -> Result<Option<String>> {
     if let Some(ref backup_path) = maybe_backup_path {
